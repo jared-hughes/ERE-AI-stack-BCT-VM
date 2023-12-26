@@ -1,7 +1,5 @@
 #include "print.h"
 
-#define fpf(A...) fprintf(out, A)
-
 void printOp(Op *op) {
   switch (op->tag) {
   case CAT:
@@ -25,9 +23,7 @@ void printOp(Op *op) {
 
 void printLists() {
   for (u32 i = 0; i < topLen; i++) {
-    if (i > 0)
-      fpf("\n");
-    fpf("==== LIST %d ====\n", i);
+    fpf("=== LIST %d ===\n", i);
     fpf("\n");
     for (u32 j = 0; j < midLens[i]; j++) {
       NamedOp namedOp = opLists[i][j];
@@ -37,5 +33,6 @@ void printLists() {
       printOp(op);
       fpf("\n");
     }
+    fpf("\n");
   }
 }

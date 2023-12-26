@@ -158,8 +158,8 @@ char *toString(Op *e, char *in) {
     // Return this constant string.
     return strdup(e->vSTR);
   case SLICE:
-    // If the int is 0, then return (a copy of) the input string `in`.
-    // Otherwise, return `in[e->vSLICE:]` (Python string slice notation).
+    // Return `in[e->vSLICE:]` (Python string slice notation).
+    // First line is unnecessary? Dupliates 'else' clause.
     return strdup(!e->vSLICE                ? in
                   : e->vSLICE >= strlen(in) ? ""
                                             : in + e->vSLICE);
@@ -179,12 +179,20 @@ char *toString(Op *e, char *in) {
 char *eval(int listIndex, char *in) {
   NamedOp *opList = opLists[listIndex];
 re:
+  if (DEBUG) {
+    fpf("%s\n", in);
+  }
   for (int j = 0; j < strlen(in); j++) {
     for (int i = 0; i < midLens[listIndex]; i++) {
       NamedOp namedOp = opList[i];
       char *name = namedOp.name;
       Op *op = namedOp.op;
       if (isPrefix(name, in + j)) {
+        // if (DEBUG) {
+        //   fpf("Applying %s: ", name);
+        //   printOp(op);
+        //   fpf("\n");
+        // }
         char *res = toString(op, in + j + strlen(name));
         char *ni = malloc(strlen(res) + strlen(in) - strlen(name) + 1 + j);
         strncpy(ni, in, j);
@@ -216,6 +224,7 @@ int main(int argc, char *argv[]) {
   initLists();
   if (DEBUG) {
     printLists();
+    fpf("=== OUTPUT ===\n\n");
   }
   // Prepare the initial string being the second argument, with 000 prepended.
   char *ni = malloc(strlen(argv[2]) + 5);

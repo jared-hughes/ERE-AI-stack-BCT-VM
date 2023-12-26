@@ -5,57 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-typedef struct Struct1 {
-  int t;
-  union {
-    struct {
-      struct Struct1 *l, *r;
-    } c;
-    char *v;
-    int r;
-    struct {
-      int f;
-      struct Struct1 *a;
-    } ap;
-  };
-} Struct1;
-
-typedef struct {
-  char *s;
-  Struct1 *d;
-} Struct2;
-
-Struct1 *me(int t) {
-  Struct1 *e = malloc(sizeof(Struct1));
-  e->t = t;
-  return e;
-}
-
-Struct1 *mc(Struct1 *l, Struct1 *r) {
-  Struct1 *e = me(0);
-  e->c.l = l;
-  e->c.r = r;
-  return e;
-}
-
-Struct1 *mf(char *v) {
-  Struct1 *e = me(1);
-  e->v = v;
-  return e;
-}
-
-Struct1 *mr(int r) {
-  Struct1 *e = me(2);
-  e->r = r;
-  return e;
-}
-
-Struct1 *ma(int f, Struct1 *a) {
-  Struct1 *e = me(3);
-  e->ap.f = f;
-  e->ap.a = a;
-  return e;
-}
+#include "op.c"
 
 FILE *in;
 
@@ -104,43 +54,43 @@ unsigned int eg() {
   return v;
 }
 
-Struct2 **fs;
+Ops **fs;
 
 unsigned int *fns, nfs;
 
-Struct1 *pe() {
+Op *pe() {
   char t = rb() * 2 + rb();
   switch (t) {
   case 0:
-    return mc(pe(), pe());
+    return make0(pe(), pe());
   case 1:
     unsigned int len = eg();
     char *v = calloc(len + 1, 1);
     for (int i = 0; i < len; i++) {
       v[i] = rb() ? 49 : 48;
     };
-    return mf(v);
+    return make1(v);
   case 2:
-    return mr(eg());
+    return make2(eg());
   case 3:
     unsigned int x = eg();
-    return ma(x, pe());
+    return make3(x, pe());
   }
 }
 
 void pf() {
-  fs = calloc(nfs = eg(), sizeof(Struct2 *));
-  fns = calloc(nfs, sizeof(Struct2));
+  fs = calloc(nfs = eg(), sizeof(Ops *));
+  fns = calloc(nfs, sizeof(Ops));
   for (int i = 0; i < nfs; i++) {
-    fs[i] = calloc(fns[i] = eg(), sizeof(Struct2));
+    fs[i] = calloc(fns[i] = eg(), sizeof(Ops));
     for (int j = 0; j < fns[i]; j++) {
-      Struct2 *op = &fs[i][j];
+      Ops *op = &fs[i][j];
       unsigned int len;
       op->s = calloc((len = eg()) + 1, 1);
       for (int x = 0; x < len; x++) {
         op->s[x] = rb() ? 49 : 48;
       }
-      op->d = pe();
+      op->node = pe();
     };
   }
 }
@@ -157,14 +107,14 @@ int pre(char *w, char *z) {
 
 char *eval(int f, char *in);
 
-char *de(Struct1 *e, char *in) {
-  switch (e->t) {
+char *de(Op *e, char *in) {
+  switch (e->tag) {
   case 2:
-    return strdup(!e->r ? in : e->r >= strlen(in) ? "" : in + e->r);
+    return strdup(!e->t2 ? in : e->t2 >= strlen(in) ? "" : in + e->t2);
   case 1:
-    return strdup(e->v);
+    return strdup(e->t1);
   case 0:
-    char *l = de(e->c.r, in), *r = de(e->c.l, in),
+    char *l = de(e->t0.r, in), *r = de(e->t0.l, in),
          *o = malloc(strlen(l) + strlen(r) + 1);
     strcpy(o, l);
     strcat(o, r);
@@ -172,17 +122,17 @@ char *de(Struct1 *e, char *in) {
     free(r);
     return o;
   case 3:
-    return eval(e->ap.f, de(e->ap.a, in));
+    return eval(e->t3.f, de(e->t3.a, in));
   }
 }
 
 char *eval(int f, char *in) {
-  Struct2 *ops = fs[f];
+  Ops *ops = fs[f];
 re:
   for (int j = 0; j < strlen(in); j++) {
     for (int i = 0; i < fns[f]; i++) {
       if (pre(ops[i].s, in + j)) {
-        char *o = de(ops[i].d, in + j + strlen(ops[i].s));
+        char *o = de(ops[i].node, in + j + strlen(ops[i].s));
         char *ni = malloc(strlen(o) + strlen(in) - strlen(ops[i].s) + 1 + j);
         strncpy(ni, in, j);
         ni[j] = 0;

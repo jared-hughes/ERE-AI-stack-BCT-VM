@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,9 +10,12 @@
 
 FILE *in;
 
-unsigned long long l, h = 0xffffffffffffffffLL, x;
+typedef unsigned long long u64;
+typedef unsigned int u32;
 
-unsigned int cxt, _pr = 0xFFFFFFFF;
+u64 l, h = 0xffffffffffffffffLL, x;
+
+u32 cxt, _pr = 0xFFFFFFFF;
 
 int ct[512][2];
 
@@ -25,9 +29,9 @@ void up(int y) {
          (ct[cxt][0] + ct[cxt][1] + 2));
 }
 
-int rb() {
-  unsigned long long m = l + ((h - l) >> 32) * _pr;
-  int y = x <= m;
+bool rb() {
+  u64 m = l + ((h - l) >> 32) * _pr;
+  bool y = x <= m;
   if (y)
     h = m;
   else
@@ -44,76 +48,80 @@ int rb() {
   return y;
 }
 
-unsigned int eg() {
-  unsigned int l2 = 0;
+// RLE?
+u32 getLen() {
+  u32 l2 = 0;
   while (rb())
     l2++;
-  unsigned int v = 0;
+  u32 v = 0;
   while (l2--)
     v = (v << 1) | rb();
   return v;
 }
 
-Ops **fs;
-
-unsigned int *fns, nfs;
+// stacks[i] is a stack of ops.
+OpWithStr **stacks;
+// midLens[i] is the length of stacks[i]
+u32 *midLens;
+// topLen is the length of the arrays stacks and midLens.
+u32 topLen;
 
 Op *pe() {
   char t = rb() * 2 + rb();
   switch (t) {
-  case 0:
-    return make0(pe(), pe());
-  case 1:
-    unsigned int len = eg();
+  case BIN:
+    return makeBIN(pe(), pe());
+  case STR:
+    u32 len = getLen();
     char *v = calloc(len + 1, 1);
     for (int i = 0; i < len; i++) {
-      v[i] = rb() ? 49 : 48;
+      v[i] = rb() ? '1' : '0';
     };
-    return make1(v);
-  case 2:
-    return make2(eg());
-  case 3:
-    unsigned int x = eg();
-    return make3(x, pe());
+    return makeSTR(v);
+  case INT:
+    return makeINT(getLen());
+  case CALL:
+    u32 x = getLen();
+    return makeCALL(x, pe());
   }
 }
 
-void pf() {
-  fs = calloc(nfs = eg(), sizeof(Ops *));
-  fns = calloc(nfs, sizeof(Ops));
-  for (int i = 0; i < nfs; i++) {
-    fs[i] = calloc(fns[i] = eg(), sizeof(Ops));
-    for (int j = 0; j < fns[i]; j++) {
-      Ops *op = &fs[i][j];
-      unsigned int len;
-      op->s = calloc((len = eg()) + 1, 1);
-      for (int x = 0; x < len; x++) {
-        op->s[x] = rb() ? 49 : 48;
+void top() {
+  topLen = getLen();
+  stacks = calloc(topLen, sizeof(OpWithStr *));
+  midLens = calloc(topLen, sizeof(OpWithStr));
+  for (int i = 0; i < topLen; i++) {
+    midLens[i] = getLen();
+    stacks[i] = calloc(midLens[i], sizeof(OpWithStr));
+    for (int j = 0; j < midLens[i]; j++) {
+      OpWithStr *stack = &stacks[i][j];
+      u32 botLen = getLen();
+      stack->str = calloc(botLen + 1, 1);
+      for (int x = 0; x < botLen; x++) {
+        stack->str[x] = rb() ? '1' : '0';
       }
-      op->node = pe();
+      stack->op = pe();
     };
   }
 }
 
-int pre(char *w, char *z) {
+/** Is w a prefix of z?
+ * E.g. "abc" is a prefix of "abc" and "abcdef" but not "ab". */
+bool isPrefix(char *w, char *z) {
   while (*w)
     if (*w != *z) {
-      return 0;
+      return false;
     } else {
       w++, z++;
     }
-  return 1;
+  return true;
 }
 
-char *eval(int f, char *in);
+char *eval(int stackIndex, char *in);
 
 char *de(Op *e, char *in) {
   switch (e->tag) {
-  case 2:
-    return strdup(!e->t2 ? in : e->t2 >= strlen(in) ? "" : in + e->t2);
-  case 1:
-    return strdup(e->t1);
-  case 0:
+  case BIN:
     char *l = de(e->t0.r, in), *r = de(e->t0.l, in),
          *o = malloc(strlen(l) + strlen(r) + 1);
     strcpy(o, l);
@@ -121,23 +129,28 @@ char *de(Op *e, char *in) {
     free(l);
     free(r);
     return o;
-  case 3:
-    return eval(e->t3.f, de(e->t3.a, in));
+  case STR:
+    return strdup(e->t1);
+  case INT:
+    return strdup(!e->t2 ? in : e->t2 >= strlen(in) ? "" : in + e->t2);
+  case CALL:
+    return eval(e->t3.stackIndex, de(e->t3.args, in));
   }
 }
 
-char *eval(int f, char *in) {
-  Ops *ops = fs[f];
+char *eval(int stackIndex, char *in) {
+  OpWithStr *stack = stacks[stackIndex];
 re:
   for (int j = 0; j < strlen(in); j++) {
-    for (int i = 0; i < fns[f]; i++) {
-      if (pre(ops[i].s, in + j)) {
-        char *o = de(ops[i].node, in + j + strlen(ops[i].s));
-        char *ni = malloc(strlen(o) + strlen(in) - strlen(ops[i].s) + 1 + j);
+    for (int i = 0; i < midLens[stackIndex]; i++) {
+      if (isPrefix(stack[i].str, in + j)) {
+        char *o = de(stack[i].op, in + j + strlen(stack[i].str));
+        char *ni =
+            malloc(strlen(o) + strlen(in) - strlen(stack[i].str) + 1 + j);
         strncpy(ni, in, j);
         ni[j] = 0;
         strcat(ni, o);
-        strcat(ni, in + j + strlen(ops[i].s));
+        strcat(ni, in + j + strlen(stack[i].str));
         free(in);
         free(o);
         in = ni;
@@ -151,13 +164,14 @@ re:
 
 int main(int ac, char *av[]) {
   in = fopen(av[1], "rb");
+  // Build a u64 x from the first 8 bytes.
   for (int i = 0; i < 8; i++) {
     int c = getc(in);
     if (c == EOF)
       c = 0;
     x = x << 8 | c;
   }
-  pf();
+  top();
   char *ni = malloc(strlen(av[2]) + 5);
   strcpy(ni, "000");
   strcat(ni, av[2]);

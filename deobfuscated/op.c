@@ -1,7 +1,7 @@
-
+typedef enum OpTag { BIN = 0, STR = 1, INT = 2, CALL = 3 } OpTag;
 
 typedef struct Op {
-  int tag;
+  OpTag tag;
   union {
     struct {
       struct Op *l, *r;
@@ -9,45 +9,49 @@ typedef struct Op {
     char *t1;
     int t2;
     struct {
-      int f;
-      struct Op *a;
+      int stackIndex;
+      struct Op *args;
     } t3;
   };
 } Op;
 
-Op *_makeBlank(int tag) {
+Op *_makeBlank(OpTag tag) {
   Op *e = malloc(sizeof(Op));
   e->tag = tag;
   return e;
 }
 
-Op *make0(Op *l, Op *r) {
-  Op *e = _makeBlank(0);
+// 0: binop
+Op *makeBIN(Op *l, Op *r) {
+  Op *e = _makeBlank(BIN);
   e->t0.l = l;
   e->t0.r = r;
   return e;
 }
 
-Op *make1(char *v) {
-  Op *e = _makeBlank(1);
+// 1: string constant.
+Op *makeSTR(char *v) {
+  Op *e = _makeBlank(STR);
   e->t1 = v;
   return e;
 }
 
-Op *make2(int r) {
-  Op *e = _makeBlank(2);
+// 2: integer constant.
+Op *makeINT(int r) {
+  Op *e = _makeBlank(INT);
   e->t2 = r;
   return e;
 }
 
-Op *make3(int f, Op *a) {
-  Op *e = _makeBlank(3);
-  e->t3.f = f;
-  e->t3.a = a;
+// 3: op index plus args.
+Op *makeCALL(int stackIndex, Op *a) {
+  Op *e = _makeBlank(CALL);
+  e->t3.stackIndex = stackIndex;
+  e->t3.args = a;
   return e;
 }
 
-typedef struct Ops {
-  char *s;
-  Op *node;
-} Ops;
+typedef struct OpWithStr {
+  char *str;
+  Op *op;
+} OpWithStr;

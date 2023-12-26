@@ -91,18 +91,18 @@ u32 randomUnbounded() {
   return v;
 }
 
-// stacks[i] is a stack of ops.
-OpWithStr **stacks;
-// midLens[i] is the length of stacks[i]
+// opLists[i] is a list of named ops.
+NamedOp **opLists;
+// midLens[i] is the length of opLists[i]
 u32 *midLens;
-// topLen is the length of the arrays stacks and midLens.
+// topLen is the length of the arrays opLists and midLens.
 u32 topLen;
 
 Op *makeRandom() {
   char t = randomBit() * 2 + randomBit();
   switch (t) {
-  case BIN:
-    return makeBIN(makeRandom(), makeRandom());
+  case CAT:
+    return makeCAT(makeRandom(), makeRandom());
   case STR:
     u32 len = randomUnbounded();
     char *v = calloc(len + 1, 1);
@@ -110,29 +110,29 @@ Op *makeRandom() {
       v[i] = randomBit() ? '1' : '0';
     };
     return makeSTR(v);
-  case INT:
-    return makeINT(randomUnbounded());
-  case CALL:
+  case SLICE:
+    return makeSLICE(randomUnbounded());
+  case SWAP:
     u32 x = randomUnbounded();
-    return makeCALL(x, makeRandom());
+    return makeSWAP(x, makeRandom());
   }
 }
 
-void initStacks() {
+void initLists() {
   topLen = randomUnbounded();
-  stacks = calloc(topLen, sizeof(OpWithStr *));
-  midLens = calloc(topLen, sizeof(OpWithStr));
+  opLists = calloc(topLen, sizeof(NamedOp *));
+  midLens = calloc(topLen, sizeof(NamedOp));
   for (int i = 0; i < topLen; i++) {
     midLens[i] = randomUnbounded();
-    stacks[i] = calloc(midLens[i], sizeof(OpWithStr));
+    opLists[i] = calloc(midLens[i], sizeof(NamedOp));
     for (int j = 0; j < midLens[i]; j++) {
-      OpWithStr *stack = &stacks[i][j];
+      NamedOp *opList = &opLists[i][j];
       u32 botLen = randomUnbounded();
-      stack->vSTR = calloc(botLen + 1, 1);
+      opList->name = calloc(botLen + 1, 1);
       for (int x = 0; x < botLen; x++) {
-        stack->vSTR[x] = randomBit() ? '1' : '0';
+        opList->name[x] = randomBit() ? '1' : '0';
       }
-      stack->op = makeRandom();
+      opList->op = makeRandom();
     };
   }
 }
@@ -149,13 +149,13 @@ bool isPrefix(char *w, char *z) {
   return true;
 }
 
-char *eval(int stackIndex, char *in);
+char *eval(int listIndex, char *in);
 
 char *toString(Op *e, char *in) {
   switch (e->tag) {
-  case BIN:
+  case CAT:
     // Get two results and concatenate them.
-    char *l = toString(e->vBIN.r, in), *r = toString(e->vBIN.l, in),
+    char *l = toString(e->vCAT.r, in), *r = toString(e->vCAT.l, in),
          *o = malloc(strlen(l) + strlen(r) + 1);
     strcpy(o, l);
     strcat(o, r);
@@ -165,36 +165,40 @@ char *toString(Op *e, char *in) {
   case STR:
     // Return this constant string.
     return strdup(e->vSTR);
-  case INT:
+  case SLICE:
     // If the int is 0, then return (a copy of) the input string `in`.
-    // Otherwise, return `in[e->vINT:]` (Python string slice notation).
-    return strdup(!e->vINT ? in : e->vINT >= strlen(in) ? "" : in + e->vINT);
-  case CALL:
+    // Otherwise, return `in[e->vSLICE:]` (Python string slice notation).
+    return strdup(!e->vSLICE                ? in
+                  : e->vSLICE >= strlen(in) ? ""
+                                            : in + e->vSLICE);
+  case SWAP:
     // Recursive eval call.
-    return eval(e->vCALL.stackIndex, toString(e->vCALL.arg, in));
+    return eval(e->vCALL.listIndex, toString(e->vCALL.op, in));
   }
 }
 
 // Repeat until fixed point:
 //  1. Scan from left-to-right in the string until finding a matching op.
-//  2. Go through the whole stack in order.
+//  2. Go through the whole op list in order.
 //    Find the first op whose name is a prefix of that part in the string.
 //  3. Replace the the op name with the evaluation result
 //    (toString the op, with `in` being the remainder of the string.)
 //  4. Repeat, back at the beginning of the string.
-char *eval(int stackIndex, char *in) {
-  OpWithStr *stack = stacks[stackIndex];
+char *eval(int listIndex, char *in) {
+  NamedOp *opList = opLists[listIndex];
 re:
   for (int j = 0; j < strlen(in); j++) {
-    for (int i = 0; i < midLens[stackIndex]; i++) {
-      OpWithStr ows = stack[i];
-      if (isPrefix(ows.vSTR, in + j)) {
-        char *res = toString(ows.op, in + j + strlen(ows.vSTR));
-        char *ni = malloc(strlen(res) + strlen(in) - strlen(ows.vSTR) + 1 + j);
+    for (int i = 0; i < midLens[listIndex]; i++) {
+      NamedOp namedOp = opList[i];
+      char *name = namedOp.name;
+      Op *op = namedOp.op;
+      if (isPrefix(name, in + j)) {
+        char *res = toString(op, in + j + strlen(name));
+        char *ni = malloc(strlen(res) + strlen(in) - strlen(name) + 1 + j);
         strncpy(ni, in, j);
         ni[j] = 0;
         strcat(ni, res);
-        strcat(ni, in + j + strlen(ows.vSTR));
+        strcat(ni, in + j + strlen(name));
         free(in);
         free(res);
         in = ni;
@@ -215,13 +219,13 @@ int main(int argc, char *argv[]) {
       c = 0;
     x = x << 8 | c;
   }
-  // Initialize stacks using the rest of the program file.
-  initStacks();
+  // Initialize opLists using the rest of the program file.
+  initLists();
   // Prepare the initial string being the second argument, with 000 prepended.
   char *ni = malloc(strlen(argv[2]) + 5);
   strcpy(ni, "000");
   strcat(ni, argv[2]);
-  // Evaluate, starting from the 0th stack.
+  // Evaluate, starting from the 0th opList.
   char *r = eval(0, ni);
   printf("%s\n", r);
 }

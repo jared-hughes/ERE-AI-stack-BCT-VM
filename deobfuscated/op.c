@@ -1,16 +1,16 @@
-typedef enum OpTag { BIN = 0, STR = 1, INT = 2, CALL = 3 } OpTag;
+typedef enum OpTag { CAT = 0, STR = 1, SLICE = 2, SWAP = 3 } OpTag;
 
 typedef struct Op {
   OpTag tag;
   union {
     struct {
       struct Op *l, *r;
-    } vBIN;
+    } vCAT;
     char *vSTR;
-    int vINT;
+    int vSLICE;
     struct {
-      int stackIndex;
-      struct Op *arg;
+      int listIndex;
+      struct Op *op;
     } vCALL;
   };
 } Op;
@@ -21,11 +21,11 @@ Op *_makeBlank(OpTag tag) {
   return e;
 }
 
-// 0: binop
-Op *makeBIN(Op *l, Op *r) {
-  Op *e = _makeBlank(BIN);
-  e->vBIN.l = l;
-  e->vBIN.r = r;
+// 0: execute children, then concatenate
+Op *makeCAT(Op *l, Op *r) {
+  Op *e = _makeBlank(CAT);
+  e->vCAT.l = l;
+  e->vCAT.r = r;
   return e;
 }
 
@@ -37,21 +37,21 @@ Op *makeSTR(char *v) {
 }
 
 // 2: integer constant.
-Op *makeINT(int r) {
-  Op *e = _makeBlank(INT);
-  e->vINT = r;
+Op *makeSLICE(int r) {
+  Op *e = _makeBlank(SLICE);
+  e->vSLICE = r;
   return e;
 }
 
-// 3: op index plus arg.
-Op *makeCALL(int stackIndex, Op *arg) {
-  Op *e = _makeBlank(CALL);
-  e->vCALL.stackIndex = stackIndex;
-  e->vCALL.arg = arg;
+// 3: execute child op with a different (fixed) list index.
+Op *makeSWAP(int listIndex, Op *op) {
+  Op *e = _makeBlank(SWAP);
+  e->vCALL.listIndex = listIndex;
+  e->vCALL.op = op;
   return e;
 }
 
-typedef struct OpWithStr {
-  char *vSTR;
+typedef struct NamedOp {
+  char *name;
   Op *op;
-} OpWithStr;
+} NamedOp;

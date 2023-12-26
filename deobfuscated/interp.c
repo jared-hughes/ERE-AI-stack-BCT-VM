@@ -1,17 +1,9 @@
-#include <ctype.h>
-#include <math.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include "interp.h"
 
-#include "op.c"
+const bool DEBUG = true;
 
 FILE *in;
-
-typedef unsigned long long u64;
-typedef unsigned int u32;
+FILE *out;
 
 u64 lo = 0, hi = 0xffffffffffffffffLL, x = 0;
 
@@ -20,6 +12,13 @@ u32 prop = 0xFFFFFFFF;
 /** weight[ctx] is a pair of ints. */
 u32 weightIndex;
 int weight[512][2];
+
+// opLists[i] is a list of named ops.
+NamedOp **opLists;
+// midLens[i] is the length of opLists[i]
+u32 *midLens;
+// topLen is the length of the arrays opLists and midLens.
+u32 topLen;
 
 void updateWeights(int y) {
   // Increment one weight of the pair.
@@ -90,13 +89,6 @@ u32 randomUnbounded() {
     v = (v << 1) | randomBit();
   return v;
 }
-
-// opLists[i] is a list of named ops.
-NamedOp **opLists;
-// midLens[i] is the length of opLists[i]
-u32 *midLens;
-// topLen is the length of the arrays opLists and midLens.
-u32 topLen;
 
 Op *makeRandom() {
   char t = randomBit() * 2 + randomBit();
@@ -212,6 +204,7 @@ re:
 
 int main(int argc, char *argv[]) {
   in = fopen(argv[1], "rb");
+  out = fopen("logs/interp.log", "w");
   // Build a u64 x from the first 8 bytes.
   for (int i = 0; i < 8; i++) {
     int c = getc(in);
@@ -221,6 +214,9 @@ int main(int argc, char *argv[]) {
   }
   // Initialize opLists using the rest of the program file.
   initLists();
+  if (DEBUG) {
+    printLists();
+  }
   // Prepare the initial string being the second argument, with 000 prepended.
   char *ni = malloc(strlen(argv[2]) + 5);
   strcpy(ni, "000");

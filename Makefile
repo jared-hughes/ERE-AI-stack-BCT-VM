@@ -4,4 +4,4 @@ bin/raw-interp: $(shell find raw)
 
 bin/interp: $(shell find deobfuscated)
 	mkdir -p bin
-	gcc deobfuscated/interp.c -o bin/interp
+	gcc deobfuscated/*.c -o bin/interp

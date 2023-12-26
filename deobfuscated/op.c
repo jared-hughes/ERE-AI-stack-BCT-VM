@@ -1,19 +1,4 @@
-typedef enum OpTag { CAT = 0, STR = 1, SLICE = 2, SWAP = 3 } OpTag;
-
-typedef struct Op {
-  OpTag tag;
-  union {
-    struct {
-      struct Op *l, *r;
-    } vCAT;
-    char *vSTR;
-    int vSLICE;
-    struct {
-      int listIndex;
-      struct Op *op;
-    } vCALL;
-  };
-} Op;
+#include "op.h"
 
 Op *_makeBlank(OpTag tag) {
   Op *e = malloc(sizeof(Op));
@@ -50,8 +35,3 @@ Op *makeSWAP(int listIndex, Op *op) {
   e->vCALL.op = op;
   return e;
 }
-
-typedef struct NamedOp {
-  char *name;
-  Op *op;
-} NamedOp;

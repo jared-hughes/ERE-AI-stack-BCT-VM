@@ -5,13 +5,13 @@ typedef struct Op {
   union {
     struct {
       struct Op *l, *r;
-    } t0;
-    char *t1;
-    int t2;
+    } vBIN;
+    char *vSTR;
+    int vINT;
     struct {
       int stackIndex;
-      struct Op *args;
-    } t3;
+      struct Op *arg;
+    } vCALL;
   };
 } Op;
 
@@ -24,34 +24,34 @@ Op *_makeBlank(OpTag tag) {
 // 0: binop
 Op *makeBIN(Op *l, Op *r) {
   Op *e = _makeBlank(BIN);
-  e->t0.l = l;
-  e->t0.r = r;
+  e->vBIN.l = l;
+  e->vBIN.r = r;
   return e;
 }
 
 // 1: string constant.
 Op *makeSTR(char *v) {
   Op *e = _makeBlank(STR);
-  e->t1 = v;
+  e->vSTR = v;
   return e;
 }
 
 // 2: integer constant.
 Op *makeINT(int r) {
   Op *e = _makeBlank(INT);
-  e->t2 = r;
+  e->vINT = r;
   return e;
 }
 
-// 3: op index plus args.
-Op *makeCALL(int stackIndex, Op *a) {
+// 3: op index plus arg.
+Op *makeCALL(int stackIndex, Op *arg) {
   Op *e = _makeBlank(CALL);
-  e->t3.stackIndex = stackIndex;
-  e->t3.args = a;
+  e->vCALL.stackIndex = stackIndex;
+  e->vCALL.arg = arg;
   return e;
 }
 
 typedef struct OpWithStr {
-  char *str;
+  char *vSTR;
   Op *op;
 } OpWithStr;

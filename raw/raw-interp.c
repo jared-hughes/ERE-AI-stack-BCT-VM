@@ -1,4 +1,4 @@
-#include"a.h"
+#include"raw-a.h"
 typedef struct E{I t;union{struct{struct E*l,*r;}c;C*v;I r;struct{I f;struct E*a;}ap;};}E;
 typedef struct{C*s;E*d;}O;E*me(I t)_(E*e=malloc(sizeof(E));e->t=t;e)
 E*mc(E*l,E*r)_(E*e=me(0);e->c.l=l;e->c.r=r;e)E*mf(C*v)_(E*e=me(1);e->v=v;e)
@@ -28,4 +28,3 @@ C*eval(I f,C*in){O*ops=fs[f];re:Fj(strlen(in),Fi(fns[f],if(pre(ops[i].s,in+j)){
 I main(I ac, C*av[]){in=fopen(av[1],"rb");
     Fi(8,I c=getc(in);if(c==EOF)c=0;x=x<<8|c)pf();C*ni=malloc(strlen(av[2])+5);
     strcpy(ni,"000");strcat(ni,av[2]);C*r=eval(0,ni);printf("%s\n",r);}
-

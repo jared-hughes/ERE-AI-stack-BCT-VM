@@ -35,3 +35,21 @@ Op *makeSWAP(int listIndex, Op *op) {
   e->vSWAP.op = op;
   return e;
 }
+
+void appendOpList(OpList *a, NamedOp namedOp) {
+  a->len++;
+  a->ops = realloc(a->ops, sizeof(NamedOp) * a->len);
+  a->ops[a->len - 1] = namedOp;
+}
+
+OpList emptyOpList() { return (OpList){.len = 0, .ops = malloc(1)}; }
+
+void appendMultiOpList(MultiOpList *a, OpList opList) {
+  a->len++;
+  a->opLists = realloc(a->opLists, sizeof(OpList) * a->len);
+  a->opLists[a->len - 1] = opList;
+}
+
+MultiOpList emptyMultiOpList() {
+  return (MultiOpList){.len = 0, .opLists = malloc(1)};
+}

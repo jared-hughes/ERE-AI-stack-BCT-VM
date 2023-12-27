@@ -18,6 +18,6 @@ void initFiles(char *inFileName);
 
 void cprintOp(Op *op);
 void printOp(Op *op);
-void printLists();
+void printLists(MultiOpList multiOpList);
 void printProp(u32 prop);
 char *nameTag(OpTag tag);

@@ -1,13 +1,6 @@
 #include "expect_bits.h"
 
-// ArrayList currList;
-
-// ArrayList expectedBitSequence(NamedOp namedOp) { currList = empty(); }
-
-void writeBit(Element b) {
-  cpf("Wrote bit %d\n", b);
-  // append(currList, b);
-}
+void writeBit(u32 b) { cpf("Wrote bit %d\n", b); }
 
 u32 charToBit(char c) {
   if (c == '1') {

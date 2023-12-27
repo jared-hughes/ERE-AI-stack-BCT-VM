@@ -2,5 +2,6 @@
 
 int compiler_main(int argc, char *argv[]) {
   initFiles(argv[1]);
-  printf("hi");
+  MultiOpList multiOpList = parseMultiOpList();
+  printLists(multiOpList);
 }

@@ -37,6 +37,12 @@ typedef struct MultiOpList {
   OpList *opLists;
 } MultiOpList;
 
+void appendOpList(OpList *a, NamedOp namedOp);
+OpList emptyOpList();
+
+void appendMultiOpList(MultiOpList *a, OpList opList);
+MultiOpList emptyMultiOpList();
+
 Op *makeCAT(Op *l, Op *r);
 
 Op *makeSTR(char *v);

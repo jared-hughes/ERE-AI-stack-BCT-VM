@@ -21,6 +21,19 @@ void printOp(Op *op) {
   }
 }
 
+char *nameTag(OpTag tag) {
+  switch (tag) {
+  case CAT:
+    return "CAT";
+  case STR:
+    return "STR";
+  case SLICE:
+    return "SLICE";
+  case SWAP:
+    return "SWAP";
+  }
+}
+
 void printLists() {
   for (u32 i = 0; i < topLen; i++) {
     fpf("=== LIST %d ===\n", i);
@@ -35,4 +48,28 @@ void printLists() {
     }
     fpf("\n");
   }
+}
+
+u64 gcd(u64 a, u64 b) {
+  while (b != 0) {
+    a = a % b;
+    if (a == 0)
+      return b;
+    b = b % a;
+  }
+  return a;
+}
+
+/** Prints simplified fraction prop/(1<<32) */
+void printProp(u32 prop) {
+  u64 a = prop;
+  u64 b = ((u64)1) << 32;
+  u64 g = gcd(a, b);
+  char buf[50];
+  snprintf(buf, 49, "0x%llx", a / g);
+  int len = strlen(buf);
+  for (int i = 0; i < 11 - len; i++) {
+    fpf(" ");
+  }
+  fpf("%s/0x%-9llx", buf, b / g);
 }

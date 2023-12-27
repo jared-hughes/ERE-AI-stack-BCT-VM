@@ -1,6 +1,8 @@
 #include "interp.h"
 
 const bool DEBUG = true;
+const bool DEBUG_INPUT = true && DEBUG;
+const bool DEBUG_OUTPUT = false && DEBUG;
 
 FILE *in;
 FILE *out;
@@ -48,20 +50,31 @@ void updateWeights(int y) {
 bool randomBit() {
   u64 m = lo + ((hi - lo) >> 32) * prop;
   bool y = x <= m;
+  if (DEBUG_INPUT) {
+    fpf("lo=0x%016llx, hi=0x%016llx, prop=0x%08x=", lo, hi, prop);
+    printProp(prop);
+    fpf(" -> m=0x%016llx; x=0x%016llx; y=%d\n", m, x, y);
+  }
   if (y)
     hi = m;
   else
     lo = m + 1;
   updateWeights(y);
-  // While lo and hi differ are equal in the top 8 bits:
+  // While lo and hi are equal in the top 8 bits:
   while (((lo ^ hi) & 0xff00000000000000LL) == 0) {
     // Shift out those 8 bits, filling in with 0s (for lo) and 1s (for hi).
+    u64 old_lo = lo;
+    u64 old_hi = hi;
     lo = lo << 8;
     hi = hi << 8 | 0xff;
     // Shift out the top 8 bits of x, shifting in with getc(in).
     int c = getc(in);
     if (c == EOF)
       c = 0;
+    if (DEBUG_INPUT) {
+      fpf("Shifting in 0x%02x because lo=0x%016llx, hi=0x%016llx.\n", c, old_lo,
+          old_hi);
+    }
     x = x << 8 | c;
   }
   return y;
@@ -81,17 +94,29 @@ bool randomBit() {
  * 8-15:   1/384 each
  */
 u32 randomUnbounded() {
+  if (DEBUG_INPUT) {
+    fpf("Making a random unbounded unsigned int.\n");
+  }
   u32 l2 = 0;
   while (randomBit())
     l2++;
   u32 v = 0;
   while (l2--)
     v = (v << 1) | randomBit();
+  if (DEBUG_INPUT) {
+    fpf("Got %u.\n", v);
+  }
   return v;
 }
 
 Op *makeRandom() {
+  if (DEBUG_INPUT) {
+    fpf("Making a random op.\n");
+  }
   char t = randomBit() * 2 + randomBit();
+  if (DEBUG_INPUT) {
+    fpf("Opcode:%5s=%d.\n", nameTag(t), t);
+  }
   switch (t) {
   case CAT:
     return makeCAT(makeRandom(), makeRandom());
@@ -124,7 +149,15 @@ void initLists() {
       for (int x = 0; x < botLen; x++) {
         opList->name[x] = randomBit() ? '1' : '0';
       }
+      if (DEBUG_INPUT) {
+        fpf("Name: %s\n", opList->name);
+      }
       opList->op = makeRandom();
+      if (DEBUG_INPUT) {
+        fpf("Created %s: ", opList->name);
+        printOp(opList->op);
+        fpf("\n");
+      }
     };
   }
 }
@@ -179,7 +212,7 @@ char *toString(Op *e, char *in) {
 char *eval(int listIndex, char *in) {
   NamedOp *opList = opLists[listIndex];
 re:
-  if (DEBUG) {
+  if (DEBUG_OUTPUT) {
     fpf("%s\n", in);
   }
   for (int j = 0; j < strlen(in); j++) {
@@ -188,7 +221,7 @@ re:
       char *name = namedOp.name;
       Op *op = namedOp.op;
       if (isPrefix(name, in + j)) {
-        // if (DEBUG) {
+        // if (DEBUG_OUTPUT) {
         //   fpf("Applying %s: ", name);
         //   printOp(op);
         //   fpf("\n");
@@ -222,10 +255,12 @@ int main(int argc, char *argv[]) {
   }
   // Initialize opLists using the rest of the program file.
   initLists();
-  if (DEBUG) {
+  if (DEBUG_INPUT) {
+    fpf("\n");
     printLists();
-    fpf("=== OUTPUT ===\n\n");
   }
+  if (DEBUG_OUTPUT)
+    fpf("=== OUTPUT ===\n\n");
   // Prepare the initial string being the second argument, with 000 prepended.
   char *ni = malloc(strlen(argv[2]) + 5);
   strcpy(ni, "000");

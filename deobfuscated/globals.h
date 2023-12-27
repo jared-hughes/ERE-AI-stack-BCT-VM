@@ -7,4 +7,4 @@ extern NamedOp **opLists;
 extern u32 *midLens;
 extern u32 topLen;
 
-extern FILE* out;
+extern FILE *out;

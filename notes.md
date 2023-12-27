@@ -1,5 +1,7 @@
 - Makefile doesn't have proper glob? Lol. `$(shell find raw)` as the target.
 - `gcc -E` to remove all the `#define`s.
+- First 8 bytes define a `u64` in MSB to LSB order.
+- Every other byte is taken individually. Only directly affects the new `x` value when `lo` and `hi` match in their top 8 bits.
 
 ## rot.bin
 

@@ -2,10 +2,9 @@
 
 const bool DEBUG = true;
 const bool DEBUG_INPUT = true && DEBUG;
+const bool DEBUG_INPUT_LOW = false && DEBUG;
+const bool DEBUG_INPUT_MID = true && DEBUG;
 const bool DEBUG_OUTPUT = false && DEBUG;
-
-FILE *in;
-FILE *out;
 
 u64 lo = 0, hi = 0xffffffffffffffffLL, x = 0;
 
@@ -50,10 +49,12 @@ void updateWeights(int y) {
 bool randomBit() {
   u64 m = lo + ((hi - lo) >> 32) * prop;
   bool y = x <= m;
-  if (DEBUG_INPUT) {
+  if (DEBUG_INPUT_LOW) {
     fpf("lo=0x%016llx, hi=0x%016llx, prop=0x%08x=", lo, hi, prop);
     printProp(prop);
     fpf(" -> m=0x%016llx; x=0x%016llx; y=%d\n", m, x, y);
+  } else if (DEBUG_INPUT_MID) {
+    fpf("Read bit %d\n", y);
   }
   if (y)
     hi = m;
@@ -71,7 +72,7 @@ bool randomBit() {
     int c = getc(in);
     if (c == EOF)
       c = 0;
-    if (DEBUG_INPUT) {
+    if (DEBUG_INPUT_LOW) {
       fpf("Shifting in 0x%02x because lo=0x%016llx, hi=0x%016llx.\n", c, old_lo,
           old_hi);
     }
@@ -94,7 +95,7 @@ bool randomBit() {
  * 8-15:   1/384 each
  */
 u32 randomUnbounded() {
-  if (DEBUG_INPUT) {
+  if (DEBUG_INPUT_MID) {
     fpf("Making a random unbounded unsigned int.\n");
   }
   u32 l2 = 0;
@@ -103,18 +104,18 @@ u32 randomUnbounded() {
   u32 v = 0;
   while (l2--)
     v = (v << 1) | randomBit();
-  if (DEBUG_INPUT) {
+  if (DEBUG_INPUT_MID) {
     fpf("Got %u.\n", v);
   }
   return v;
 }
 
 Op *makeRandom() {
-  if (DEBUG_INPUT) {
+  if (DEBUG_INPUT_MID) {
     fpf("Making a random op.\n");
   }
   char t = randomBit() * 2 + randomBit();
-  if (DEBUG_INPUT) {
+  if (DEBUG_INPUT_MID) {
     fpf("Opcode:%5s=%d.\n", nameTag(t), t);
   }
   switch (t) {
@@ -149,11 +150,11 @@ void initLists() {
       for (int x = 0; x < botLen; x++) {
         opList->name[x] = randomBit() ? '1' : '0';
       }
-      if (DEBUG_INPUT) {
+      if (DEBUG_INPUT_MID) {
         fpf("Name: %s\n", opList->name);
       }
       opList->op = makeRandom();
-      if (DEBUG_INPUT) {
+      if (DEBUG_INPUT_MID) {
         fpf("Created %s: ", opList->name);
         printOp(opList->op);
         fpf("\n");
@@ -198,7 +199,7 @@ char *toString(Op *e, char *in) {
                                             : in + e->vSLICE);
   case SWAP:
     // Recursive eval call.
-    return eval(e->vCALL.listIndex, toString(e->vCALL.op, in));
+    return eval(e->vSWAP.listIndex, toString(e->vSWAP.op, in));
   }
 }
 
@@ -243,9 +244,8 @@ re:
   return in;
 }
 
-int main(int argc, char *argv[]) {
-  in = fopen(argv[1], "rb");
-  out = fopen("logs/interp.log", "w");
+int interp_main(int argc, char *argv[]) {
+  initFiles(argv[1]);
   // Build a u64 x from the first 8 bytes.
   for (int i = 0; i < 8; i++) {
     int c = getc(in);
@@ -258,6 +258,7 @@ int main(int argc, char *argv[]) {
   if (DEBUG_INPUT) {
     fpf("\n");
     printLists();
+    writeBitsForLists(topLen, midLens, opLists);
   }
   if (DEBUG_OUTPUT)
     fpf("=== OUTPUT ===\n\n");

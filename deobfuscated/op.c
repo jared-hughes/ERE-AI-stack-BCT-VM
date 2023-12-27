@@ -31,7 +31,7 @@ Op *makeSLICE(int r) {
 // 3: execute child op with a different (fixed) list index.
 Op *makeSWAP(int listIndex, Op *op) {
   Op *e = _makeBlank(SWAP);
-  e->vCALL.listIndex = listIndex;
-  e->vCALL.op = op;
+  e->vSWAP.listIndex = listIndex;
+  e->vSWAP.op = op;
   return e;
 }

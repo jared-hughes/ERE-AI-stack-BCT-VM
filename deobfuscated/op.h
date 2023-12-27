@@ -18,7 +18,7 @@ typedef struct Op {
     struct {
       int listIndex;
       struct Op *op;
-    } vCALL;
+    } vSWAP;
   };
 } Op;
 

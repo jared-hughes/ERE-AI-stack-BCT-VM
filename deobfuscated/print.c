@@ -1,5 +1,26 @@
 #include "print.h"
 
+FILE *in;
+FILE *out;
+FILE *compilerLogOut;
+
+void initFiles(char *inFileName) {
+  if (!inFileName) {
+    epf("Missing input file");
+    exit(1);
+  }
+  in = fopen(inFileName, "rb");
+  compilerLogOut = fopen("logs/compiler.log", "w");
+  out = fopen("logs/interp.log", "w");
+}
+
+void cprintOp(Op *op) {
+  FILE *tmp = out;
+  out = compilerLogOut;
+  printOp(op);
+  out = tmp;
+}
+
 void printOp(Op *op) {
   switch (op->tag) {
   case CAT:
@@ -14,8 +35,8 @@ void printOp(Op *op) {
     fpf("(slice %d)", op->vSLICE);
     break;
   case SWAP:
-    fpf("(swap %d ", op->vCALL.listIndex);
-    printOp(op->vCALL.op);
+    fpf("(swap %d ", op->vSWAP.listIndex);
+    printOp(op->vSWAP.op);
     fpf(")");
     break;
   }

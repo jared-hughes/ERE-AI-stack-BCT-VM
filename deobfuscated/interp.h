@@ -8,6 +8,9 @@
 #include <string.h>
 #include <time.h>
 
+#include "compiler.h"
 #include "globals.h"
 #include "op.h"
 #include "print.h"
+
+int interp_main(int argc, char *argv[]);

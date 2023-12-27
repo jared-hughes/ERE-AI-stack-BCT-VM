@@ -2,6 +2,7 @@
 - `gcc -E` to remove all the `#define`s.
 - First 8 bytes define a `u64` in MSB to LSB order.
 - Every other byte is taken individually. Only directly affects the new `x` value when `lo` and `hi` match in their top 8 bits.
+- `make all`; `./bin/interp programs/rot.bin 11011;`
 
 ## rot.bin
 

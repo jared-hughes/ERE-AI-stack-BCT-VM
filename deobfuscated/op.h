@@ -27,6 +27,16 @@ typedef struct NamedOp {
   Op *op;
 } NamedOp;
 
+typedef struct OpList {
+  u32 len;
+  NamedOp *ops;
+} OpList;
+
+typedef struct MultiOpList {
+  u32 len;
+  OpList *opLists;
+} MultiOpList;
+
 Op *makeCAT(Op *l, Op *r);
 
 Op *makeSTR(char *v);

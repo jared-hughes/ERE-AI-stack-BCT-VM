@@ -14,12 +14,7 @@ u32 prop = 0xFFFFFFFF;
 u32 weightIndex;
 int weight[512][2];
 
-// opLists[i] is a list of named ops.
-NamedOp **opLists;
-// midLens[i] is the length of opLists[i]
-u32 *midLens;
-// topLen is the length of the arrays opLists and midLens.
-u32 topLen;
+MultiOpList multiOpList;
 
 void updateWeights(int y) {
   // Increment one weight of the pair.
@@ -136,31 +131,45 @@ Op *makeRandom() {
   }
 }
 
-void initLists() {
-  topLen = randomUnbounded();
-  opLists = calloc(topLen, sizeof(NamedOp *));
-  midLens = calloc(topLen, sizeof(NamedOp));
-  for (int i = 0; i < topLen; i++) {
-    midLens[i] = randomUnbounded();
-    opLists[i] = calloc(midLens[i], sizeof(NamedOp));
-    for (int j = 0; j < midLens[i]; j++) {
-      NamedOp *opList = &opLists[i][j];
-      u32 botLen = randomUnbounded();
-      opList->name = calloc(botLen + 1, 1);
-      for (int x = 0; x < botLen; x++) {
-        opList->name[x] = randomBit() ? '1' : '0';
-      }
-      if (DEBUG_INPUT_MID) {
-        fpf("Name: %s\n", opList->name);
-      }
-      opList->op = makeRandom();
-      if (DEBUG_INPUT_MID) {
-        fpf("Created %s: ", opList->name);
-        printOp(opList->op);
-        fpf("\n");
-      }
-    };
+NamedOp initNamedOp() {
+  NamedOp namedOp;
+  u32 botLen = randomUnbounded();
+  namedOp.name = calloc(botLen + 1, 1);
+  for (int x = 0; x < botLen; x++) {
+    namedOp.name[x] = randomBit() ? '1' : '0';
   }
+  if (DEBUG_INPUT_MID) {
+    fpf("Name: %s\n", namedOp.name);
+  }
+  namedOp.op = makeRandom();
+  if (DEBUG_INPUT_MID) {
+    fpf("Created %s: ", namedOp.name);
+    printOp(namedOp.op);
+    fpf("\n");
+  }
+  return namedOp;
+}
+
+OpList initOpList() {
+  OpList opList;
+  u32 midLen = randomUnbounded();
+  opList.len = midLen;
+  opList.ops = calloc(midLen, sizeof(NamedOp));
+  for (int j = 0; j < midLen; j++) {
+    opList.ops[j] = initNamedOp();
+  };
+  return opList;
+}
+
+MultiOpList initMultiOpLists() {
+  MultiOpList multiOpList;
+  u32 topLen = randomUnbounded();
+  multiOpList.len = topLen;
+  multiOpList.opLists = calloc(topLen, sizeof(OpList));
+  for (int i = 0; i < topLen; i++) {
+    multiOpList.opLists[i] = initOpList();
+  }
+  return multiOpList;
 }
 
 /** Is string w a prefix of string z?
@@ -211,14 +220,14 @@ char *toString(Op *e, char *in) {
 //    (toString the op, with `in` being the remainder of the string.)
 //  4. Repeat, back at the beginning of the string.
 char *eval(int listIndex, char *in) {
-  NamedOp *opList = opLists[listIndex];
+  OpList opList = multiOpList.opLists[listIndex];
 re:
   if (DEBUG_OUTPUT) {
     fpf("%s\n", in);
   }
   for (int j = 0; j < strlen(in); j++) {
-    for (int i = 0; i < midLens[listIndex]; i++) {
-      NamedOp namedOp = opList[i];
+    for (int i = 0; i < opList.len; i++) {
+      NamedOp namedOp = opList.ops[i];
       char *name = namedOp.name;
       Op *op = namedOp.op;
       if (isPrefix(name, in + j)) {
@@ -254,11 +263,11 @@ int interp_main(int argc, char *argv[]) {
     x = x << 8 | c;
   }
   // Initialize opLists using the rest of the program file.
-  initLists();
+  multiOpList = initMultiOpLists();
   if (DEBUG_INPUT) {
     fpf("\n");
-    printLists();
-    writeBitsForLists(topLen, midLens, opLists);
+    printLists(multiOpList);
+    writeBitsForLists(multiOpList);
   }
   if (DEBUG_OUTPUT)
     fpf("=== OUTPUT ===\n\n");

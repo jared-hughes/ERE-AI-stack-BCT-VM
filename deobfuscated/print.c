@@ -55,19 +55,24 @@ char *nameTag(OpTag tag) {
   }
 }
 
-void printLists() {
-  for (u32 i = 0; i < topLen; i++) {
+void printNamedOp(NamedOp namedOp) {
+  fpf("%s: ", namedOp.name);
+  printOp(namedOp.op);
+}
+
+void printList(OpList opList) {
+  for (u32 j = 0; j < opList.len; j++) {
+    printNamedOp(opList.ops[j]);
+    fpf("\n");
+  }
+  fpf("\n");
+}
+
+void printLists(MultiOpList multiOpList) {
+  for (u32 i = 0; i < multiOpList.len; i++) {
     fpf("=== LIST %d ===\n", i);
     fpf("\n");
-    for (u32 j = 0; j < midLens[i]; j++) {
-      NamedOp namedOp = opLists[i][j];
-      char *name = namedOp.name;
-      Op *op = namedOp.op;
-      fpf("%s: ", name);
-      printOp(op);
-      fpf("\n");
-    }
-    fpf("\n");
+    printList(multiOpList.opLists[i]);
   }
 }
 

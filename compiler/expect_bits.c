@@ -73,16 +73,16 @@ void writeBitsForNamedOp(NamedOp namedOp) {
   writeBitsForOp(namedOp.op);
 }
 
-void writeBitsForList(u32 len, NamedOp *opList) {
-  writeBitsForNumber(len);
-  for (u32 i = 0; i < len; i++) {
-    writeBitsForNamedOp(opList[i]);
+void writeBitsForList(OpList opList) {
+  writeBitsForNumber(opList.len);
+  for (u32 i = 0; i < opList.len; i++) {
+    writeBitsForNamedOp(opList.ops[i]);
   }
 }
 
-void writeBitsForLists(u32 topLen, u32 *midLens, NamedOp **opLists) {
-  writeBitsForNumber(topLen);
-  for (u32 i = 0; i < topLen; i++) {
-    writeBitsForList(midLens[i], opLists[i]);
+void writeBitsForLists(MultiOpList multiOpList) {
+  writeBitsForNumber(multiOpList.len);
+  for (u32 i = 0; i < multiOpList.len; i++) {
+    writeBitsForList(multiOpList.opLists[i]);
   }
 }

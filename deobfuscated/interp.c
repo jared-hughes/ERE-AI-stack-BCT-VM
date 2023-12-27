@@ -2,7 +2,7 @@
 
 const bool DEBUG = true;
 const bool DEBUG_INPUT = true && DEBUG;
-const bool DEBUG_INPUT_LOW = false && DEBUG;
+const bool DEBUG_INPUT_LOW = true && DEBUG;
 const bool DEBUG_INPUT_MID = true && DEBUG;
 const bool DEBUG_OUTPUT = false && DEBUG;
 
@@ -10,7 +10,7 @@ u64 lo = 0, hi = 0xffffffffffffffffLL, x = 0;
 
 u32 prop = 0xFFFFFFFF;
 
-/** weight[ctx] is a pair of ints. */
+/** weight[weightIndex] is a pair of ints. */
 u32 weightIndex;
 int weight[512][2];
 

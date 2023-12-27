@@ -1,6 +1,11 @@
 #include "expect_bits.h"
 
-void writeBit(u32 b) { cpf("Wrote bit %d\n", b); }
+IntList bitList;
+
+void writeBit(u32 b) {
+  appendIntList(&bitList, b);
+  cpf("Wrote bit %d\n", b);
+}
 
 u32 charToBit(char c) {
   if (c == '1') {
@@ -73,9 +78,11 @@ void writeBitsForList(OpList opList) {
   }
 }
 
-void writeBitsForLists(MultiOpList multiOpList) {
+IntList writeBitsForLists(MultiOpList multiOpList) {
+  bitList = emptyIntList();
   writeBitsForNumber(multiOpList.len);
   for (u32 i = 0; i < multiOpList.len; i++) {
     writeBitsForList(multiOpList.opLists[i]);
   }
+  return bitList;
 }

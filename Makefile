@@ -6,5 +6,5 @@ bin/raw-interp: $(shell find raw)
 
 bin/interp bin/compiler: main.c main.h $(shell find deobfuscated compiler)
 	mkdir -p bin
-	gcc -DINTERP main.c {compiler,deobfuscated}/*.c -Icompiler -Ideobfuscated -o bin/interp
-	gcc main.c {compiler,deobfuscated}/*.c -Icompiler -Ideobfuscated -o bin/compiler
+	gcc -g -DINTERP main.c {compiler,deobfuscated}/*.c -Icompiler -Ideobfuscated -o bin/interp
+	gcc -g main.c {compiler,deobfuscated}/*.c -Icompiler -Ideobfuscated -o bin/compiler

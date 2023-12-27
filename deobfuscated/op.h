@@ -4,6 +4,7 @@
 
 typedef unsigned long long u64;
 typedef unsigned int u32;
+typedef unsigned char u8;
 
 typedef enum OpTag { CAT = 0, STR = 1, SLICE = 2, SWAP = 3 } OpTag;
 

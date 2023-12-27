@@ -2,8 +2,8 @@
 
 #include <stdbool.h>
 
-#include "expect_bits.h"
+#include "lists.h"
 #include "op.h"
 #include "print.h"
 
-MultiOpList parseMultiOpList();
+IntList charsForBits(IntList bits);

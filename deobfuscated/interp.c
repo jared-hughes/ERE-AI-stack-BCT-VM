@@ -1,14 +1,17 @@
 #include "interp.h"
 
 const bool DEBUG = true;
-const bool DEBUG_INPUT = true && DEBUG;
-const bool DEBUG_INPUT_LOW = true && DEBUG;
-const bool DEBUG_INPUT_MID = true && DEBUG;
-const bool DEBUG_OUTPUT = false && DEBUG;
+const bool DEBUG_INPUT = false && DEBUG;
+const bool DEBUG_INPUT_LOW = false && DEBUG;
+const bool DEBUG_INPUT_MID = false && DEBUG;
+const bool DEBUG_OUTPUT = true && DEBUG;
 
 u64 lo = 0, hi = 0xffffffffffffffffLL, x = 0;
 
 u32 prop = 0xFFFFFFFF;
+
+const u32 MAX_SUBS = 9999;
+u32 subs = 0;
 
 /** weight[weightIndex] is a pair of ints. */
 u32 weightIndex;
@@ -222,6 +225,11 @@ char *toString(Op *e, char *in) {
 char *eval(int listIndex, char *in) {
   OpList opList = multiOpList.opLists[listIndex];
 re:
+  subs++;
+  if (subs > MAX_SUBS) {
+    epf("Reached substitution limit.\n");
+    exit(1);
+  }
   if (DEBUG_OUTPUT) {
     fpf("%s\n", in);
   }

@@ -6,6 +6,15 @@ void my_getline(char **line) {
   u32 len = 0;
   while (!feof(in)) {
     char c = fgetc(in);
+    // Skip leading comments
+    if (len == 0 && c == '-') {
+      while (!feof(in)) {
+        char d = fgetc(in);
+        if (d == '\n')
+          break;
+      }
+      continue;
+    }
     // Skip leading newlines and whitsepace.
     if (len == 0 && is_whitespace(c))
       continue;

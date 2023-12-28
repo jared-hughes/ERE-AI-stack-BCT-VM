@@ -1,6 +1,7 @@
 #pragma once
 
 #include "op.h"
+#include "print.h"
 
 typedef struct IntList {
   u32 len;
@@ -8,18 +9,22 @@ typedef struct IntList {
 } IntList;
 
 // Inclusive bounds.
-typedef struct Bound {
-  u8 min;
-  u8 max;
-} Bound;
+typedef struct LongBound {
+  u64 min;
+  u64 max;
+} LongBound;
 
-typedef struct BoundList {
-  Bound *bounds;
+static const LongBound longBoundFull = {.min = 0, .max = 0xFFFFFFFFFFFFFFFF};
+
+typedef struct LongBoundList {
+  LongBound *bounds;
   u32 len;
-} BoundList;
+} LongBoundList;
+
+LongBound intersectBounds(LongBound a, LongBound b);
 
 void appendIntList(IntList *a, int x);
 IntList emptyIntList();
 
-void appendBoundList(BoundList *a, Bound x);
-BoundList emptyBoundList();
+void appendLongBoundList(LongBoundList *a, LongBound x);
+LongBoundList emptyLongBoundList();

@@ -8,12 +8,22 @@ void appendIntList(IntList *a, int x) {
 
 IntList emptyIntList() { return (IntList){.len = 0, .elems = malloc(1)}; }
 
-void appendBoundList(BoundList *a, Bound x) {
+LongBound intersectBounds(LongBound a, LongBound b) {
+  LongBound out = {.min = a.min < b.min ? b.min : a.min,
+                   .max = a.max < b.max ? a.max : b.max};
+  if (out.max < out.min) {
+    epf("Impossible: max < min.");
+    exit(1);
+  }
+  return out;
+}
+
+void appendLongBoundList(LongBoundList *a, LongBound x) {
   a->len++;
-  a->bounds = realloc(a->bounds, sizeof(Bound) * a->len);
+  a->bounds = realloc(a->bounds, sizeof(LongBound) * a->len);
   a->bounds[a->len - 1] = x;
 }
 
-BoundList emptyBoundList() {
-  return (BoundList){.len = 0, .bounds = malloc(1)};
+LongBoundList emptyLongBoundList() {
+  return (LongBoundList){.len = 0, .bounds = malloc(1)};
 }

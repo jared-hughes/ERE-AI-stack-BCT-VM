@@ -1,112 +1,66 @@
 #include "reverse.h"
 
-/** Returns list of u32 values corresponding to the successive expected `prop`
- * values. */
-// u32 *computeProps(IntList bits) {
-//   u32 weightIndex;
-//   int weight[512][2];
-//   u32 prop = 0xFFFFFFFF;
+const bool DEBUG_REVERSE = false;
 
-//   u32 *props = calloc(bits.len, sizeof(u32));
+typedef struct WeightCtx {
+  u32 weightIndex;
+  int weight[512][2];
+  u32 prop;
+} WeightCtx;
 
-//   for (u32 i = 0; i < bits.len; i++) {
-//     props[i] = prop;
-//     bool y = bits.elems[i];
+WeightCtx initialWeightCtx = {
+    .weightIndex = 0, .weight = {0}, .prop = 0xFFFFFFFF};
 
-//     // ======== updateWeights(int y) ========
-//     // Increment one weight of the pair.
-//     // Halve both if it exceeds 28 bits of 1s.
-//     if (++weight[weightIndex][y] > 0xFFFFFFF) {
-//       weight[weightIndex][0] >>= 1;
-//       weight[weightIndex][1] >>= 1;
-//     }
-//     // Left-shift the weight index, shifting in `y` as the LSB.
-//     weightIndex = (weightIndex << 1) | y;
-//     weightIndex &= 0xff;
-//     // Adjust prop to (roughly) the second weight of the pair, divided by the
-//     // sum.
-//     prop = (((u64)(weight[weightIndex][1] + 1) << 32) /
-//             (weight[weightIndex][0] + weight[weightIndex][1] + 2));
-//   }
-//   return props;
-// }
-
-void impossible(Bound *xPtr, u64 m) {
-  for (u32 i = 0; i < 8; i++) {
-    epf("(%02x..%02x)", xPtr[i].min, xPtr[i].max);
+void updateWeights2(WeightCtx *ctx, bool y) {
+  // Increment one weight of the pair.
+  // Halve both if it exceeds 28 bits of 1s.
+  if (++ctx->weight[ctx->weightIndex][y] > 0xFFFFFFF) {
+    ctx->weight[ctx->weightIndex][0] >>= 1;
+    ctx->weight[ctx->weightIndex][1] >>= 1;
   }
-  epf("\n");
-  for (u32 i = 8; i--;) {
-    epf("(  %02llx  )", m >> (i * 8) & 0xFF);
-  }
-  epf("\n");
+  // Left-shift the weight index, shifting in `y` as the LSB.
+  ctx->weightIndex = ((ctx->weightIndex << 1) | y) & 0xFF;
+  // Adjust prop to (roughly) the second weight of the pair, divided by the
+  // sum.
+  ctx->prop =
+      (((u64)ctx->weight[ctx->weightIndex][1] + 1) << 32) /
+      (ctx->weight[ctx->weightIndex][0] + ctx->weight[ctx->weightIndex][1] + 2);
 }
 
-void coerceLeq(Bound *xPtr, u64 m) {
-  // Decrease the first max to guarantee xPtr[0:7] <= m.
-  // TODO: Consider not subtracting 1
-  // THIS IS NEEDED. Might even need to set up several alternatives.
-  u8 max = (m >> 56) - 1;
-  if (xPtr[0].min <= max) {
-    xPtr[0].max = max;
-  } else {
-    epf("Impossible situation in coerceLeq.\n");
-    impossible(xPtr, m);
-    exit(1);
-  }
-}
-
-void coerceGt(Bound *xPtr, u64 m) {
-  // Increase the first min to guarantee xPtr[0:7] > m.
-  // TODO: Consider not adding 1.
-  // THIS IS NEEDED. Might even need to set up several alternatives.
-  u8 min = (m >> 56) + 1;
-  if (xPtr[0].max >= min) {
-    xPtr[0].min = min;
-  } else {
-    epf("Impossible situation in coerceGt.\n");
-    impossible(xPtr, m);
-    exit(1);
-  }
-}
-
-/** Returns list of char values (inside u32s) to create such bits. */
-IntList charsForBits(IntList bits) {
-  u32 weightIndex = 0;
-  int weight[512][2] = {0};
-  u32 prop = 0xFFFFFFFF;
-  BoundList bounds = emptyBoundList();
-  for (u32 i = 0; i < 8; i++) {
-    appendBoundList(&bounds, (Bound){.min = 0x00, .max = 0xFF});
-  }
-  Bound *xPtr = bounds.bounds;
+/**
+ * Return list `bounds` such that we need
+ *   bounds[i].min <= chars[i:i+7] <= bounds[i].max
+ */
+LongBoundList xBoundsFromBits(IntList bits) {
+  WeightCtx weightCtx = initialWeightCtx;
+  LongBoundList b = emptyLongBoundList();
+  appendLongBoundList(&b, longBoundFull);
+  u32 j = 0;
   u64 lo = 0, hi = 0xffffffffffffffffLL;
   for (u64 i = 0; i < bits.len; i++) {
     bool y = bits.elems[i];
-    u64 m = lo + ((hi - lo) >> 32) * prop;
-    cpf("lo=0x%016llx, hi=0x%016llx, prop=0x%08x", lo, hi, prop);
-    cpf(" -> m=0x%016llx; y=%d\n", m, y);
+    u64 m = lo + ((hi - lo) >> 32) * weightCtx.prop;
+    if (DEBUG_REVERSE) {
+      cpf("lo=0x%016llx, hi=0x%016llx, prop=0x%08x", lo, hi, weightCtx.prop);
+      cpf(" -> m=0x%016llx; y=%d\n", m, y);
+    }
     if (y) {
       hi = m;
-      coerceLeq(xPtr, m);
+      if (DEBUG_REVERSE)
+        cpf("Intersect hi %16llx: %d\n", m, j);
+      // Force x <= m to be true
+      b.bounds[j] =
+          intersectBounds(b.bounds[j], (LongBound){.min = 0, .max = m});
     } else {
       lo = m + 1;
-      coerceGt(xPtr, m);
+      if (DEBUG_REVERSE)
+        cpf("Intersect lo %16llx: %d\n", m + 1, j);
+      // Force x <= m to be false, i.e. x >= m+1 is true.
+      b.bounds[j] = intersectBounds(
+          b.bounds[j], (LongBound){.min = m + 1, .max = longBoundFull.max});
     }
     // ======== updateWeights(int y) ========
-    // Increment one weight of the pair.
-    // Halve both if it exceeds 28 bits of 1s.
-    if (++weight[weightIndex][y] > 0xFFFFFFF) {
-      weight[weightIndex][0] >>= 1;
-      weight[weightIndex][1] >>= 1;
-    }
-    // Left-shift the weight index, shifting in `y` as the LSB.
-    weightIndex = (weightIndex << 1) | y;
-    weightIndex &= 0xff;
-    // Adjust prop to (roughly) the second weight of the pair, divided by the
-    // sum.
-    prop = (((u64)(weight[weightIndex][1] + 1) << 32) /
-            (weight[weightIndex][0] + weight[weightIndex][1] + 2));
+    updateWeights2(&weightCtx, y);
     // =====================================
     // While lo and hi are equal in the top 8 bits:
     while (((lo ^ hi) & 0xff00000000000000LL) == 0) {
@@ -114,14 +68,58 @@ IntList charsForBits(IntList bits) {
       lo = lo << 8;
       hi = hi << 8 | 0xff;
       // x = (x << 8) | c;
-      appendBoundList(&bounds, (Bound){.min = 0x00, .max = 0xFF});
-      xPtr++;
+      appendLongBoundList(&b, longBoundFull);
+      j++;
     }
   }
-  IntList chars = emptyIntList();
-  for (u64 i = 0; i < bounds.len; i++) {
-    appendIntList(&chars, bounds.bounds[i].min);
+  return b;
+}
+
+IntList charsFromXBounds(LongBoundList bounds) {
+  if (bounds.len == 0) {
+    epf("Empty long bounds.");
+    exit(1);
   }
+  IntList chars = emptyIntList();
+  for (u32 i = 0; i < 7; i++) {
+    appendLongBoundList(&bounds, longBoundFull);
+  }
+  for (u64 i = 0; i < bounds.len; i++) {
+    LongBound bound = bounds.bounds[i];
+    if (DEBUG_REVERSE)
+      cpf("bound {min=%16llx,max=%16llx} at %p\n", bound.min, bound.max,
+          &bounds.bounds[i]);
+    LongBound *nextBound = &bounds.bounds[i + 1];
+    u64 topByteMax = bound.max >> 56;
+    u64 topByteMin = bound.min >> 56;
+    if (topByteMax - topByteMin == 0) {
+      if (DEBUG_REVERSE)
+        cpf("Char 0x%02llX (Shifting zero)\n", topByteMin);
+      appendIntList(&chars, topByteMin);
+      *nextBound =
+          intersectBounds(*nextBound, (LongBound){.min = bound.min << 8,
+                                                  .max = bound.max << 8});
+    } else if (topByteMax - topByteMin == 1) {
+      if (DEBUG_REVERSE)
+        cpf("Char 0x%02llX (Shifting one. Guessing low)\n", topByteMin);
+      // GUESS. TODO: branch.
+      appendIntList(&chars, topByteMin);
+      *nextBound =
+          intersectBounds(*nextBound, (LongBound){.min = bound.min << 8,
+                                                  .max = longBoundFull.max});
+    } else {
+      u8 ch = (bound.min << 8) == 0 ? topByteMin : topByteMin + 1;
+      if (DEBUG_REVERSE)
+        cpf("Char 0x%02X (No shift needed)\n", ch);
+      // Easy case. topByteMax - topByteMin >= 1
+      appendIntList(&chars, ch);
+    }
+  }
+  return chars;
+}
+
+IntList charsForBits(IntList bits) {
+  IntList chars = charsFromXBounds(xBoundsFromBits(bits));
   // Replace trailing 0s with EOF.
   while (chars.len > 0 && chars.elems[chars.len - 1] == 0) {
     chars.len--;

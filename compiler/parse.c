@@ -19,43 +19,78 @@ void my_getline(char **line) {
   }
 }
 
-/** Replace trailing spaces with null terminator, and return pointer to first
- * non-space.*/
-char *trimSpaces(char *str) {
-  for (; *str && is_whitespace(*str);) {
-    str++;
-  }
-  char *end = str + strlen(str) - 1;
-  for (; *end && is_whitespace(*end); end--) {
-    *end = '\0';
-  }
-  return str;
-}
-
 bool assertBitstring(char *str) {
   for (; *str; ++str) {
     charToBit(*str);
   }
 }
 
+int parseInt(Lexer *lexer) {
+  PToken tok = lexer_consumeExpectTag(lexer, INTEGER);
+  return atoi(tok.text);
+}
+
+Op *parseMain(Lexer *lexer);
+
+Op *parseInitial(Lexer *lexer) {
+  PToken fst = lexer_consume(lexer);
+  if (fst.tag == EOF) {
+    epf("Early EOF.\n");
+    exit(1);
+  }
+  switch (fst.tag) {
+  case BITSTRING:
+    char *str = fst.text;
+    if (*str == '\'') {
+      str++;
+      str[strlen(str) - 1] = '\0';
+    }
+    return makeSTR(str);
+  case OPAREN:
+    PToken snd = lexer_consume(lexer);
+    switch (snd.tag) {
+    case KSWAP:
+      int listIndex = parseInt(lexer);
+      Op *op = parseMain(lexer);
+      lexer_consumeExpectTag(lexer, CPAREN);
+      return makeSWAP(listIndex, op);
+    case KSLICE:
+      int slice = parseInt(lexer);
+      lexer_consumeExpectTag(lexer, CPAREN);
+      return makeSLICE(slice);
+    default:
+      epf("Invalid token after '(': '%s'\n", snd.text);
+      exit(1);
+    }
+    break;
+  default:
+    epf("Invalid token: '%s'\n", fst.text);
+    exit(1);
+  }
+}
+
+Op *parseDotDot(Lexer *lexer, Op *leftNode) {
+  Op *rightNode = parseMain(lexer);
+  return makeCAT(leftNode, rightNode);
+}
+
+Op *parseMain(Lexer *lexer) {
+  Op *leftNode = parseInitial(lexer);
+  while (true) {
+    PToken tok = lexer_peek(lexer);
+    // No need for binding power since there's only one infix op.
+    if (tok.tag != DOTDOT)
+      break;
+    lexer_consume(lexer);
+    leftNode = parseDotDot(lexer, leftNode);
+  }
+  return leftNode;
+}
+
 Op *parseOp(char *str) {
-  str = trimSpaces(str);
-  if (str[0] != '\'') {
-    epf("Parse error: expected string! Str:\n");
-    epf("%s\n", str);
-    exit(1);
-  }
-  str++;
-  int len = strlen(str);
-  // For now, only parse strings.
-  if (str[len - 1] != '\'') {
-    epf("Parse error: expected string. Str:\n");
-    epf("%s\n", str);
-    exit(1);
-  }
-  str[len - 1] = '\0';
-  assertBitstring(str);
-  return makeSTR(strdup(str));
+  Lexer lexer = emptyLexer(str);
+  Op *ret = parseMain(&lexer);
+  return ret;
 }
 
 NamedOp parseNamedOp(char *line) {

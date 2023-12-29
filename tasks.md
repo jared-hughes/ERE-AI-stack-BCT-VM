@@ -10,3 +10,11 @@ The following programs are on the menu today:
 1. **Determine if the amount of zeroes is the same as the amount of ones** - worth **10 points**.
 1. **Truth machine** - worth **2 points**.
 1. **Demonstrate the computational class** - through L-completeness, i.e. simulate an automaton of desired computational class in the language: 1=FSM, 2=PDA, 3=LBA, 4=TM. Worth as **many points** as `ceil(pow(2, 1.5\*sum n))``, hence e.g. demonstrating proofs for FSM and PDA yields you 23 points.
+
+- decrement and increment must work with leading zeros, though. and it must add digits on overflow.
+- decrement does not have to clean up leading zeros.
+
+Truth machine:
+
+- input 0: output 0, terminate.
+- input 1: loop forever (and don't fill up RAM)

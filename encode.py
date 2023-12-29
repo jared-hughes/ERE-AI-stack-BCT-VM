@@ -9,4 +9,4 @@ for c in s:
         out += "10"
     elif c == "1":
         out += "11"
-print(out + "0")
+print("0" + out + "00")

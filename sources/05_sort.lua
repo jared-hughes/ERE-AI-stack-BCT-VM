@@ -1,5 +1,3 @@
--- Another idea: sublists, filter for 0s, filter for 1s.
-
 === LIST 0 ===
 
 0000: ''

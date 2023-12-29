@@ -1,4 +1,3 @@
--- DOESNT ADD A ZERO FOR 11111
 === LIST 0 ===
 
 1000: '11'

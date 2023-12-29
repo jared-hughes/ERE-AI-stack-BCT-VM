@@ -11,4 +11,4 @@ make all > /dev/null
 
 ./bin/compiler "$1"
 
-./bin/interp bin/out.bin "$(./encode.py "$2")" | ./decode.py
+./run_bin.sh bin/out.bin "$2"
